@@ -1,52 +1,39 @@
-FROM --platform=linux/amd64 continuumio/miniconda3
-
-SHELL ["/bin/bash", "-c"]
+FROM mambaorg/micromamba:latest
 
 # -------------------------------------------------------
-# 1. System deps
+# Create env with stable JVM + numpy stack
 # -------------------------------------------------------
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    git \
-    wget \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-# -------------------------------------------------------
-# 2. Create env
-# -------------------------------------------------------
-RUN conda create -n bioformats python=3.9 -y
-ENV PATH="/opt/conda/envs/bioformats/bin:$PATH"
-
-# -------------------------------------------------------
-# 3. Core scientific + JVM stack (conda-forge ONLY)
-# -------------------------------------------------------
-# Install Java + javabridge stack
-RUN conda install -n bioformats -c conda-forge -y \
-    openjdk \
-    numpy=1.23 \
+RUN micromamba create -y -n bioformats -c conda-forge \
+    python=3.10 \
+    numpy=1.26 \
     cython \
+    openjdk=8 \
     pip \
     setuptools \
     wheel \
-    python-javabridge
+    && micromamba clean -a -y
 
-RUN conda clean -a -y
+# Activate env automatically
+ENV ENV_NAME=bioformats
+ENV PATH=/opt/conda/envs/bioformats/bin:$PATH
 
 # -------------------------------------------------------
-# CRITICAL FIX: expose libjvm.so
+# Install Java bridge stack via conda (IMPORTANT)
+# -------------------------------------------------------
+RUN micromamba install -y -n bioformats -c conda-forge \
+    python-javabridge \
+    && micromamba clean -a -y
+
+# bioformats is pip-only
+RUN pip install --no-cache-dir python-bioformats==4.1.0
+
+# -------------------------------------------------------
+# Fix JVM runtime linking (CRITICAL)
 # -------------------------------------------------------
 ENV JAVA_HOME=/opt/conda/envs/bioformats
-ENV LD_LIBRARY_PATH=/opt/conda/envs/bioformats/lib/server:/opt/conda/envs/bioformats/lib:$LD_LIBRARY_PATH
-
-# -------------------------------------------------------
-# Install bioformats wrapper
-# -------------------------------------------------------
-RUN pip install --no-cache-dir python-bioformats
+ENV LD_LIBRARY_PATH=$JAVA_HOME/lib/server:$LD_LIBRARY_PATH
 
 # -------------------------------------------------------
 # Verify
 # -------------------------------------------------------
 RUN python -c "import javabridge; import bioformats; print('BIOFORMATS OK')"
-
-CMD ["python"]
