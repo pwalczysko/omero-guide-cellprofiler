@@ -34,10 +34,26 @@ jobs:
       # -------------------------------------------------------
       # 4. (Optional) Add a test pipeline
       # -------------------------------------------------------
-      - name: Add sample pipeline
+      - name: Verify pipeline exists
         run: |
-          echo "No pipeline provided yet" > pipeline.cppipe
+            test -f pipelines/my_pipeline.cppipe
 
+      - name: Verify images
+        run: |
+            find input_images -type f
+
+      - name: Run CellProfiler
+        run: |
+            docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            cellprofiler-headless \
+            cellprofiler \
+                -c \
+                -r \
+                -p /workspace/pipelines/my_pipeline.cppipe \
+                -i /workspace/input_images \
+                -o /workspace/output_results
+      
       # -------------------------------------------------------
       # 5. Run CellProfiler headless
       # -------------------------------------------------------
