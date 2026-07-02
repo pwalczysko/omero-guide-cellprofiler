@@ -1,98 +1,92 @@
-FROM ubuntu:22.04
+FROM continuumio/miniconda3:latest
 
-ENV DEBIAN_FRONTEND=noninteractive
+SHELL ["/bin/bash", "-c"]
 
 # -------------------------------------------------------
-# 1. System dependencies (must come first)
+# 1. System dependencies (CRITICAL)
 # -------------------------------------------------------
 RUN apt-get update && apt-get install -y \
-    software-properties-common \
     build-essential \
-    gcc g++ \
-    git curl wget \
+    git \
+    curl \
     pkg-config \
     default-jdk \
     libopenblas-dev \
     liblapack-dev \
+    gfortran \
     libjpeg-dev \
-    libpng-dev \
-    libtiff-dev \
     zlib1g-dev \
+    libtiff-dev \
+    libpng-dev \
     libxml2-dev \
     libxslt1-dev \
-    libgtk-3-dev \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender1 \
-    libgl1-mesa-glx \
-    libmysqlclient-dev \
+    libgl1 \
+    default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------------
-# 2. Python 3.9 (required for CellProfiler 4.2.x)
+# 2. Create conda env
 # -------------------------------------------------------
-RUN add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && apt-get install -y \
-    python3.9 \
-    python3.9-dev \
-    python3.9-distutils
-
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
+RUN conda create -n cp python=3.9 -y
+ENV PATH=/opt/conda/envs/cp/bin:$PATH
 
 # -------------------------------------------------------
-# 3. Pip bootstrap (correct for Python 3.9)
+# 3. Upgrade pip toolchain (IMPORTANT for javabridge builds)
 # -------------------------------------------------------
-RUN curl -sS https://bootstrap.pypa.io/pip/3.9/get-pip.py | python3.9
+RUN pip install --upgrade pip setuptools wheel
 
 # -------------------------------------------------------
-# 4. Upgrade packaging tools
+# 4. PIN critical NumPy version (THIS FIXES YOUR ERROR)
 # -------------------------------------------------------
-RUN python3.9 -m pip install --upgrade pip setuptools wheel
+RUN pip install "numpy<1.24"
 
 # -------------------------------------------------------
-# 5. CRITICAL FIX: prevent pip build isolation issues
-# -------------------------------------------------------
-ENV PIP_NO_BUILD_ISOLATION=1
-ENV PIP_NO_CACHE_DIR=1
-
-# -------------------------------------------------------
-# 6. CRITICAL FIX: pin NumPy FIRST (this fixes javabridge crash)
-# -------------------------------------------------------
-RUN pip install numpy==1.19.5
-
-# -------------------------------------------------------
-# 7. Scientific stack (must stay compatible with NumPy 1.19)
+# 5. Install CellProfiler dependencies (careful ordering)
 # -------------------------------------------------------
 RUN pip install \
-    scipy==1.5.4 \
+    scipy==1.9.0 \
     scikit-image==0.18.3 \
     scikit-learn==0.24.2 \
     matplotlib==3.5.3 \
-    pillow==9.5.0 \
-    tifffile==2021.11.2 \
-    h5py==3.6.0 \
-    imageio \
+    h5py \
+    pillow \
     mahotas \
+    tifffile \
+    requests \
+    imageio \
     Jinja2 \
     joblib \
-    inflect \
-    pyzmq \
-    requests
+    inflect
 
 # -------------------------------------------------------
-# 8. Java bridge (NOW SAFE because NumPy is pinned)
+# 6. Java bridge stack (order matters)
 # -------------------------------------------------------
-RUN pip install python-bioformats python-javabridge
+RUN apt-get update && apt-get install -y openjdk-11-jdk
+
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+RUN pip install python-javabridge==4.0.3 \
+    python-bioformats==4.0.7
 
 # -------------------------------------------------------
-# 9. CellProfiler itself
+# 7. MySQL client fix (no build from source)
+# -------------------------------------------------------
+RUN pip install mysqlclient==1.4.6
+
+# -------------------------------------------------------
+# 8. Finally CellProfiler
 # -------------------------------------------------------
 RUN pip install cellprofiler==4.2.8.1
 
 # -------------------------------------------------------
-# 10. Working directory
+# 9. Headless config (CI-safe)
 # -------------------------------------------------------
-WORKDIR /workspace
+ENV MPLBACKEND=Agg
+ENV QT_QPA_PLATFORM=offscreen
 
-CMD ["/bin/bash"]
+CMD ["python", "-c", "import cellprofiler; print('CellProfiler OK')"]
