@@ -65,9 +65,9 @@ RUN pip install \
 # -------------------------------------------------------
 # 6. Java bridge stack (order matters)
 # -------------------------------------------------------
-RUN apt-get update && apt-get install -y openjdk-11-jdk
+RUN apt-get update && apt-get install -y openjdk-17-jdk
 
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 RUN pip install python-javabridge==4.0.3 \
