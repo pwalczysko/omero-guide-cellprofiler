@@ -1,9 +1,9 @@
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # -------------------------------------------------------
-# 1. System dependencies (ALL native build + runtime deps)
+# 1. System dependencies (must come first)
 # -------------------------------------------------------
 RUN apt-get update && apt-get install -y \
     software-properties-common \
@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------------
-# 2. Python 3.9 (stable for CellProfiler 4.2.x)
+# 2. Python 3.9 (required for CellProfiler 4.2.x)
 # -------------------------------------------------------
 RUN add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && apt-get install -y \
@@ -38,15 +38,12 @@ RUN add-apt-repository ppa:deadsnakes/ppa && \
     python3.9-dev \
     python3.9-distutils
 
-# make python3.9 default python3
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
 
 # -------------------------------------------------------
-# 3. Pip bootstrap (FIXED for Python 3.9)
+# 3. Pip bootstrap (correct for Python 3.9)
 # -------------------------------------------------------
 RUN curl -sS https://bootstrap.pypa.io/pip/3.9/get-pip.py | python3.9
-
-RUN pip install numpy==1.19.5
 
 # -------------------------------------------------------
 # 4. Upgrade packaging tools
@@ -54,11 +51,21 @@ RUN pip install numpy==1.19.5
 RUN python3.9 -m pip install --upgrade pip setuptools wheel
 
 # -------------------------------------------------------
-# 5. Scientific stack (PINNED for CellProfiler 4.2.8.1)
+# 5. CRITICAL FIX: prevent pip build isolation issues
 # -------------------------------------------------------
-RUN pip install --no-cache-dir \
-    numpy==1.23.5 \
-    scipy==1.9.0 \
+ENV PIP_NO_BUILD_ISOLATION=1
+ENV PIP_NO_CACHE_DIR=1
+
+# -------------------------------------------------------
+# 6. CRITICAL FIX: pin NumPy FIRST (this fixes javabridge crash)
+# -------------------------------------------------------
+RUN pip install numpy==1.19.5
+
+# -------------------------------------------------------
+# 7. Scientific stack (must stay compatible with NumPy 1.19)
+# -------------------------------------------------------
+RUN pip install \
+    scipy==1.5.4 \
     scikit-image==0.18.3 \
     scikit-learn==0.24.2 \
     matplotlib==3.5.3 \
@@ -74,20 +81,17 @@ RUN pip install --no-cache-dir \
     requests
 
 # -------------------------------------------------------
-# 6. CellProfiler dependencies (JVM + bioformats)
+# 8. Java bridge (NOW SAFE because NumPy is pinned)
 # -------------------------------------------------------
-RUN pip install --no-cache-dir \
-    python-bioformats \
-    python-javabridge
+RUN pip install python-bioformats python-javabridge
 
 # -------------------------------------------------------
-# 7. CellProfiler itself
+# 9. CellProfiler itself
 # -------------------------------------------------------
-RUN pip install --no-cache-dir \
-    cellprofiler==4.2.8.1
+RUN pip install cellprofiler==4.2.8.1
 
 # -------------------------------------------------------
-# 8. Working directory
+# 10. Working directory
 # -------------------------------------------------------
 WORKDIR /workspace
 
