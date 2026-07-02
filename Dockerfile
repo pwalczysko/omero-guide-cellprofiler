@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     gcc g++ \
     git curl wget \
     pkg-config \
-    default-jre \
+    default-jdk \
     libopenblas-dev \
     liblapack-dev \
     libjpeg-dev \
