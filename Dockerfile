@@ -3,54 +3,51 @@ FROM continuumio/miniconda3
 SHELL ["/bin/bash", "-c"]
 
 # -------------------------------------------------------
-# 1. Base system dependencies (minimal but required)
+# 1. System deps
 # -------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
+    build-essential \
+    git \
     wget \
     ca-certificates \
-    git \
-    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------------
-# 2. Create isolated conda environment
+# 2. Create env
 # -------------------------------------------------------
 RUN conda create -n bioformats python=3.9 -y
-
 ENV PATH="/opt/conda/envs/bioformats/bin:$PATH"
 
 # -------------------------------------------------------
-# 3. Use conda-forge for ALL scientific + Java stack
-#    (THIS is the key stability fix)
+# 3. Core scientific + JVM stack (conda-forge ONLY)
 # -------------------------------------------------------
 RUN conda install -n bioformats -c conda-forge -y \
     openjdk \
     numpy=1.23 \
-    scipy \
-    pip \
     cython \
+    pip \
     setuptools \
-    wheel
+    wheel \
+    python-javabridge
 
 # -------------------------------------------------------
-# 4. Install bioformats stack via conda-forge (critical)
-# -------------------------------------------------------
-RUN conda install -n bioformats -c conda-forge -y \
-    python-javabridge \
-    python-bioformats
-
-# -------------------------------------------------------
-# 5. Clean conda cache (reduces image size)
+# 4. IMPORTANT CLEANUP
 # -------------------------------------------------------
 RUN conda clean -a -y
 
 # -------------------------------------------------------
-# 6. Verify installation
+# 5. Install bioformats (pip ONLY — not conda!)
 # -------------------------------------------------------
-RUN python -c "import javabridge; import bioformats; print('BIOFORMATS STACK OK')"
+RUN pip install --no-cache-dir python-bioformats
 
 # -------------------------------------------------------
-# 7. Default command
+# 6. Prevent build isolation issues
 # -------------------------------------------------------
+ENV PIP_NO_BUILD_ISOLATION=1
+
+# -------------------------------------------------------
+# 7. Verify
+# -------------------------------------------------------
+RUN python -c "import javabridge; import bioformats; print('OK: bioformats stack ready')"
+
 CMD ["python"]
