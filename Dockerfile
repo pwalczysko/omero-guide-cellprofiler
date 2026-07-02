@@ -3,62 +3,54 @@ FROM continuumio/miniconda3
 SHELL ["/bin/bash", "-c"]
 
 # -------------------------------------------------------
-# 1. System dependencies (IMPORTANT: correct Java package)
+# 1. Base system dependencies (minimal but required)
 # -------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    g++ \
-    make \
-    git \
+    bash \
     wget \
-    curl \
     ca-certificates \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender1 \
-    libice6 \
+    git \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Debian trixie FIX: use default-jdk (NOT openjdk-11-jdk or 17-jdk)
-RUN apt-get update && apt-get install -y default-jdk && rm -rf /var/lib/apt/lists/*
-
-ENV JAVA_HOME=/usr/lib/jvm/default-java
-ENV PATH="$JAVA_HOME/bin:$PATH"
-
 # -------------------------------------------------------
-# 2. Create conda env (IMPORTANT for numpy compatibility)
+# 2. Create isolated conda environment
 # -------------------------------------------------------
-RUN conda create -n cp python=3.9 -y
-ENV PATH="/opt/conda/envs/cp/bin:$PATH"
+RUN conda create -n bioformats python=3.9 -y
+
+ENV PATH="/opt/conda/envs/bioformats/bin:$PATH"
 
 # -------------------------------------------------------
-# 3. Core Python build tooling (CRITICAL ORDER)
+# 3. Use conda-forge for ALL scientific + Java stack
+#    (THIS is the key stability fix)
 # -------------------------------------------------------
-RUN pip install --upgrade pip setuptools wheel
-
-# VERY IMPORTANT: install numpy BEFORE anything else
-RUN pip install "numpy<2"
-
-# -------------------------------------------------------
-# 4. Prevent build isolation from breaking numpy detection
-# -------------------------------------------------------
-ENV PIP_NO_BUILD_ISOLATION=1
-ENV PIP_NO_CACHE_DIR=1
-
-# -------------------------------------------------------
-# 5. Install javabridge FIRST (isolated, controlled)
-# -------------------------------------------------------
-RUN pip install --no-build-isolation \
-    python-javabridge==4.0.3
+RUN conda install -n bioformats -c conda-forge -y \
+    openjdk \
+    numpy=1.23 \
+    scipy \
+    pip \
+    cython \
+    setuptools \
+    wheel
 
 # -------------------------------------------------------
-# 6. Install bioformats AFTER javabridge
+# 4. Install bioformats stack via conda-forge (critical)
 # -------------------------------------------------------
-RUN pip install python-bioformats==4.0.7
+RUN conda install -n bioformats -c conda-forge -y \
+    python-javabridge \
+    python-bioformats
 
 # -------------------------------------------------------
-# 7. Verify installation
+# 5. Clean conda cache (reduces image size)
 # -------------------------------------------------------
-RUN python -c "import javabridge; print('javabridge OK')"
+RUN conda clean -a -y
+
+# -------------------------------------------------------
+# 6. Verify installation
+# -------------------------------------------------------
+RUN python -c "import javabridge; import bioformats; print('BIOFORMATS STACK OK')"
+
+# -------------------------------------------------------
+# 7. Default command
+# -------------------------------------------------------
+CMD ["python"]
