@@ -24,4 +24,4 @@ dependencies:
     - ome-zarr==0.14.0
     - jupyter==1.0.0
     - omero-py==5.22.1
-    - git+https://github.com/CellProfiler/CellProfiler.git@v4.2.4
+    - cellprofiler
