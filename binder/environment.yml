@@ -1,14 +1,12 @@
 channels:
   - defaults
-  - anaconda
-  - bioconda
   - conda-forge
-  - ome
+  - bioconda
 dependencies:
   # - zeroc-ice36-python
   - h5py
   - pip
-  - python==3.12.*
+  - python==3.10
   - conda-forge::zeroc-ice==3.6.5
   - openjdk==11.0.13
   # - conda-forge::wxpython==4.1.0
