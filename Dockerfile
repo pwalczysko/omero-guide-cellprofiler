@@ -1,39 +1,24 @@
-FROM mambaorg/micromamba:latest
+FROM cellprofiler/cellprofiler:4.2.8
 
-# -------------------------------------------------------
-# Create env with stable JVM + numpy stack
-# -------------------------------------------------------
-RUN micromamba create -y -n bioformats -c conda-forge \
-    python=3.10 \
-    numpy=1.26 \
-    cython \
-    openjdk=8 \
-    pip \
-    setuptools \
-    wheel \
-    && micromamba clean -a -y
+USER root
 
-# Activate env automatically
-ENV ENV_NAME=bioformats
-ENV PATH=/opt/conda/envs/bioformats/bin:$PATH
+# System packages (only if you need them)
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    curl \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# -------------------------------------------------------
-# Install Java bridge stack via conda (IMPORTANT)
-# -------------------------------------------------------
-RUN micromamba install -y -n bioformats -c conda-forge \
-    python-javabridge \
-    && micromamba clean -a -y
+# Extra Python packages
+RUN pip install --no-cache-dir \
+    pandas \
+    scikit-image \
+    tifffile \
+    opencv-python-headless \
+    imageio \
+    pyarrow
 
-# bioformats is pip-only
-RUN pip install --no-cache-dir python-bioformats==4.1.0
+WORKDIR /workspace
 
-# -------------------------------------------------------
-# Fix JVM runtime linking (CRITICAL)
-# -------------------------------------------------------
-ENV JAVA_HOME=/opt/conda/envs/bioformats
-ENV LD_LIBRARY_PATH=$JAVA_HOME/lib/server:$LD_LIBRARY_PATH
-
-# -------------------------------------------------------
-# Verify
-# -------------------------------------------------------
-RUN python -c "import javabridge; import bioformats; print('BIOFORMATS OK')"
+CMD ["cellprofiler", "--help"]
