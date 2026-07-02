@@ -46,6 +46,8 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.9 1
 # -------------------------------------------------------
 RUN curl -sS https://bootstrap.pypa.io/pip/3.9/get-pip.py | python3.9
 
+RUN pip install numpy==1.19.5
+
 # -------------------------------------------------------
 # 4. Upgrade packaging tools
 # -------------------------------------------------------
