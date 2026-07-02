@@ -1,0 +1,63 @@
+name: CellProfiler CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run-cellprofiler:
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------------------------------------------------------
+      # 1. Checkout repo
+      # -------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -------------------------------------------------------
+      # 2. Build Docker image
+      # -------------------------------------------------------
+      - name: Build CellProfiler image
+        run: |
+          docker build -t cellprofiler-headless .
+
+      # -------------------------------------------------------
+      # 3. Create test folders
+      # -------------------------------------------------------
+      - name: Prepare test directories
+        run: |
+          mkdir -p input_images
+          mkdir -p output_results
+
+      # -------------------------------------------------------
+      # 4. (Optional) Add a test pipeline
+      # -------------------------------------------------------
+      - name: Add sample pipeline
+        run: |
+          echo "No pipeline provided yet" > pipeline.cppipe
+
+      # -------------------------------------------------------
+      # 5. Run CellProfiler headless
+      # -------------------------------------------------------
+      - name: Run CellProfiler pipeline
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            cellprofiler-headless \
+            cellprofiler \
+              -c \
+              -r \
+              -p /workspace/pipeline.cppipe \
+              -i /workspace/input_images \
+              -o /workspace/output_results
+
+      # -------------------------------------------------------
+      # 6. Upload outputs
+      # -------------------------------------------------------
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cellprofiler-output
+          path: output_results
