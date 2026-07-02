@@ -21,6 +21,7 @@ ENV PATH="/opt/conda/envs/bioformats/bin:$PATH"
 # -------------------------------------------------------
 # 3. Core scientific + JVM stack (conda-forge ONLY)
 # -------------------------------------------------------
+# Install Java + javabridge stack
 RUN conda install -n bioformats -c conda-forge -y \
     openjdk \
     numpy=1.23 \
@@ -30,24 +31,22 @@ RUN conda install -n bioformats -c conda-forge -y \
     wheel \
     python-javabridge
 
-# -------------------------------------------------------
-# 4. IMPORTANT CLEANUP
-# -------------------------------------------------------
 RUN conda clean -a -y
 
 # -------------------------------------------------------
-# 5. Install bioformats (pip ONLY — not conda!)
+# CRITICAL FIX: expose libjvm.so
+# -------------------------------------------------------
+ENV JAVA_HOME=/opt/conda/envs/bioformats
+ENV LD_LIBRARY_PATH=/opt/conda/envs/bioformats/lib/server:/opt/conda/envs/bioformats/lib:$LD_LIBRARY_PATH
+
+# -------------------------------------------------------
+# Install bioformats wrapper
 # -------------------------------------------------------
 RUN pip install --no-cache-dir python-bioformats
 
 # -------------------------------------------------------
-# 6. Prevent build isolation issues
+# Verify
 # -------------------------------------------------------
-ENV PIP_NO_BUILD_ISOLATION=1
-
-# -------------------------------------------------------
-# 7. Verify
-# -------------------------------------------------------
-RUN python -c "import javabridge; import bioformats; print('OK: bioformats stack ready')"
+RUN python -c "import javabridge; import bioformats; print('BIOFORMATS OK')"
 
 CMD ["python"]
