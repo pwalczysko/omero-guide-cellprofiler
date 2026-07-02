@@ -1,110 +1,64 @@
-FROM continuumio/miniconda3:latest
+FROM continuumio/miniconda3
 
 SHELL ["/bin/bash", "-c"]
 
 # -------------------------------------------------------
-# 1. System dependencies (CRITICAL)
+# 1. System dependencies (IMPORTANT: correct Java package)
 # -------------------------------------------------------
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    gcc \
+    g++ \
+    make \
     git \
+    wget \
     curl \
-    pkg-config \
-    default-jdk \
-    libopenblas-dev \
-    liblapack-dev \
-    gfortran \
-    libjpeg-dev \
-    zlib1g-dev \
-    libtiff-dev \
-    libpng-dev \
-    libxml2-dev \
-    libxslt1-dev \
+    ca-certificates \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
     libxrender1 \
-    libgl1 \
-    default-libmysqlclient-dev \
+    libice6 \
     && rm -rf /var/lib/apt/lists/*
 
-# -------------------------------------------------------
-# 2. Create conda env
-# -------------------------------------------------------
-RUN conda create -n cp python=3.9 -y
-ENV PATH=/opt/conda/envs/cp/bin:$PATH
+# Debian trixie FIX: use default-jdk (NOT openjdk-11-jdk or 17-jdk)
+RUN apt-get update && apt-get install -y default-jdk && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+ENV PATH="$JAVA_HOME/bin:$PATH"
 
 # -------------------------------------------------------
-# 3. Upgrade pip toolchain (IMPORTANT for javabridge builds)
+# 2. Create conda env (IMPORTANT for numpy compatibility)
+# -------------------------------------------------------
+RUN conda create -n cp python=3.9 -y
+ENV PATH="/opt/conda/envs/cp/bin:$PATH"
+
+# -------------------------------------------------------
+# 3. Core Python build tooling (CRITICAL ORDER)
 # -------------------------------------------------------
 RUN pip install --upgrade pip setuptools wheel
 
-# -------------------------------------------------------
-# 4. PIN critical NumPy version (THIS FIXES YOUR ERROR)
-# -------------------------------------------------------
-RUN pip install "numpy<1.24"
+# VERY IMPORTANT: install numpy BEFORE anything else
+RUN pip install "numpy<2"
 
 # -------------------------------------------------------
-# 5. Install CellProfiler dependencies (careful ordering)
+# 4. Prevent build isolation from breaking numpy detection
 # -------------------------------------------------------
-RUN pip install \
-    scipy==1.9.0 \
-    scikit-image==0.18.3 \
-    scikit-learn==0.24.2 \
-    matplotlib==3.5.3 \
-    h5py \
-    pillow \
-    mahotas \
-    tifffile \
-    requests \
-    imageio \
-    Jinja2 \
-    joblib \
-    inflect
+ENV PIP_NO_BUILD_ISOLATION=1
+ENV PIP_NO_CACHE_DIR=1
 
 # -------------------------------------------------------
-# 6. Java bridge stack (order matters)
+# 5. Install javabridge FIRST (isolated, controlled)
 # -------------------------------------------------------
-# -------------------------------------------------------
-# Java (stable across Debian versions)
-# -------------------------------------------------------
-RUN apt-get update && apt-get install -y curl tar
-
-ENV JAVA_VERSION=17
-
-RUN curl -L -o /tmp/jdk.tar.gz \
-    https://api.adoptium.net/v3/binary/latest/${JAVA_VERSION}/ga/linux/x64/jdk/hotspot/normal/eclipse
-
-RUN mkdir -p /opt/java && \
-    tar -xzf /tmp/jdk.tar.gz -C /opt/java --strip-components=1
-
-ENV JAVA_HOME=/opt/java
-ENV PATH="$JAVA_HOME/bin:$PATH"
-
-RUN java -version
-ENV PATH=$JAVA_HOME/bin:$PATH
-
-RUN pip install "numpy<1.24"
-
 RUN pip install --no-build-isolation \
-    numpy \
-    python-javabridge==4.0.3 \
-    python-bioformats==4.0.7
+    python-javabridge==4.0.3
 
 # -------------------------------------------------------
-# 7. MySQL client fix (no build from source)
+# 6. Install bioformats AFTER javabridge
 # -------------------------------------------------------
-RUN pip install mysqlclient==1.4.6
+RUN pip install python-bioformats==4.0.7
 
 # -------------------------------------------------------
-# 8. Finally CellProfiler
+# 7. Verify installation
 # -------------------------------------------------------
-RUN pip install cellprofiler==4.2.8.1
-
-# -------------------------------------------------------
-# 9. Headless config (CI-safe)
-# -------------------------------------------------------
-ENV MPLBACKEND=Agg
-ENV QT_QPA_PLATFORM=offscreen
-
-CMD ["python", "-c", "import cellprofiler; print('CellProfiler OK')"]
+RUN python -c "import javabridge; print('javabridge OK')"
