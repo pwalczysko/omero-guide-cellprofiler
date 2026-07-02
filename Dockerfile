@@ -65,9 +65,23 @@ RUN pip install \
 # -------------------------------------------------------
 # 6. Java bridge stack (order matters)
 # -------------------------------------------------------
-RUN apt-get update && apt-get install -y openjdk-17-jdk
+# -------------------------------------------------------
+# Java (stable across Debian versions)
+# -------------------------------------------------------
+RUN apt-get update && apt-get install -y curl tar
 
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_VERSION=17
+
+RUN curl -L -o /tmp/jdk.tar.gz \
+    https://api.adoptium.net/v3/binary/latest/${JAVA_VERSION}/ga/linux/x64/jdk/hotspot/normal/eclipse
+
+RUN mkdir -p /opt/java && \
+    tar -xzf /tmp/jdk.tar.gz -C /opt/java --strip-components=1
+
+ENV JAVA_HOME=/opt/java
+ENV PATH="$JAVA_HOME/bin:$PATH"
+
+RUN java -version
 ENV PATH=$JAVA_HOME/bin:$PATH
 
 RUN pip install python-javabridge==4.0.3 \
