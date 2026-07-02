@@ -84,7 +84,11 @@ ENV PATH="$JAVA_HOME/bin:$PATH"
 RUN java -version
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-RUN pip install python-javabridge==4.0.3 \
+RUN pip install "numpy<1.24"
+
+RUN pip install --no-build-isolation \
+    numpy \
+    python-javabridge==4.0.3 \
     python-bioformats==4.0.7
 
 # -------------------------------------------------------
