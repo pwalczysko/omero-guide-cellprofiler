@@ -31,9 +31,11 @@ jobs:
           mkdir -p input_images
           mkdir -p output_results
 
-      # -------------------------------------------------------
-      # 4. (Optional) Add a test pipeline
-      # -------------------------------------------------------
+      - name: Add sample pipeline
+        run: |
+            mkdir -p pipelines
+            echo "dummy" > pipelines/my_pipeline.cppipe
+      
       - name: Verify pipeline exists
         run: |
             test -f pipelines/my_pipeline.cppipe
