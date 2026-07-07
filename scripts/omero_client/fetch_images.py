@@ -69,6 +69,12 @@ def download_plate_images(conn, plate_id, out_dir, max_wells=5):
         index=False,
     )
 
+    image_paths = pd.DataFrame(image_paths)
+    image_paths.to_csv(
+        os.path.join(out_dir, "Image.csv"),
+        index=False,
+    )
+
     print(f"Downloaded {len(image_paths)} channel images.")
     print(f"Saved {len(mapping)} entries to mapping.csv")
 
