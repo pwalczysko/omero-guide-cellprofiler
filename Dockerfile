@@ -20,14 +20,8 @@ RUN pip install --no-cache-dir \
     pyarrow
 
 
-RUN pip install \
-    omero-py \
-    ezomero \
-    pandas \
-    numpy
-
 COPY scripts /workspace/scripts
-COPY pipelines /workspace/pipelines
+COPY scripts/cp /workspace/scripts/cp
 
 
 WORKDIR /workspace

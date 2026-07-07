@@ -1,0 +1,56 @@
+name: CellProfiler CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run-cellprofiler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Build CellProfiler image
+        run: |
+          docker build -t cellprofiler-headless .
+
+      - name: Prepare test directories
+        run: |
+          mkdir -p input_images
+          mkdir -p output_results
+  
+      - name: Debug repository contents
+        run: |
+          pwd
+          find . -maxdepth 3 -type f | sort
+          ls -R scripts
+      
+      - name: Verify pipeline exists
+        run: |
+            test -f /home/runner/work/omero-guide-cellprofiler/omero-guide-cellprofiler/scripts/cp/ExamplePercentPositive.cppipe
+
+      - name: Verify images
+        run: |
+            find input_images -type f
+
+      - name: Run CellProfiler
+        run: |
+            docker run --rm \
+            -v "/home/runner/work/omero-guide-cellprofiler/omero-guide-cellprofiler:/workspace" \
+            cellprofiler-headless \
+            cellprofiler \
+                -c \
+                -r \
+                -p /workspace/scripts/cp/ExamplePercentPositive.cppipe \
+                -i /workspace/input_images_gha_testing \
+                -o /workspace/output_results
+      
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: cellprofiler-output
+          path: output_results
