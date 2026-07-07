@@ -33,15 +33,16 @@ tool to run this repository as a local Docker instance:
 Finally, if you would like to install the necessary requirements locally,
 we suggest using conda.
 
-Then, create the environment:
+Then, create the omero-py with pandas and tifffile environment:
 
+    $ conda create -n cp-p312 python=3.12
+    $ conda activate cp-p312
+    $ pip install https://github.com/glencoesoftware/zeroc-ice-py-macos-universal2/releases/download/20240131/zeroc_ice-3.6.5-cp312-cp312-macosx_11_0_universal2.whl # example for Mac OS M1
+    $ pip install https://github.com/glencoesoftware/zeroc-ice-py-macos-universal2/releases/download/20240131/zeroc_ice-3.6.5-cp312-cp312-macosx_11_0_universal2.whl # example for Mac OS M1
+    $ pip install omero-py pandas tifffile
     $ git clone https://github.com/ome/omero-guide-cellprofiler
-    $ cd omero-guide-cellprofiler
-    $ conda env create -n omero-guide-cellprofiler -f binder/environment.yml
-
-and activate the newly created environment:
-
-    $ conda activate omero-guide-cellprofiler
+    $ cd omero-guide-cellprofiler/scripts
+    $ python idr0002_download_save.py
 
 The following steps are only required if you want to run the notebooks
 
