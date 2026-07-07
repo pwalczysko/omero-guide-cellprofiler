@@ -19,6 +19,17 @@ RUN pip install --no-cache-dir \
     imageio \
     pyarrow
 
+
+RUN pip install \
+    omero-py \
+    ezomero \
+    pandas \
+    numpy
+
+COPY scripts /workspace/scripts
+COPY pipelines /workspace/pipelines
+
+
 WORKDIR /workspace
 
 CMD ["cellprofiler", "--help"]

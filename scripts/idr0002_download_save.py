@@ -2,12 +2,17 @@
 from omero_client.connect import connect
 from omero_client.fetch_images import download_plate_images
 from cp.run_cellprofiler import run_cellprofiler
-from cp.collect_results import load_nuclei_table
+from cp.collect_results import load_image_table
 from omero_client.upload_results import upload_as_table
 
-HOST = "workshop.openmicroscopy.org"
-USER = "user-1"
-PW = "elmi2026"
+from getpass import getpass
+
+HOST = input("OMERO host [workshop.openmicroscopy.org]: ").strip()
+if not HOST:
+    HOST = "workshop.openmicroscopy.org"
+
+USER = input("Username: ").strip()
+PW = getpass("Password: ")
 PLATE_ID = 55
 
 WORKDIR = "./workspace"
@@ -25,7 +30,7 @@ def main():
     run_cellprofiler(INPUT_DIR, OUTPUT_DIR, PIPELINE)
 
     print("Collecting results...")
-    df = load_nuclei_table(OUTPUT_DIR)
+    df = load_image_table(INPUT_DIR, OUTPUT_DIR)
 
     print("Uploading to OMERO...")
     upload_as_table(conn, PLATE_ID, df)
